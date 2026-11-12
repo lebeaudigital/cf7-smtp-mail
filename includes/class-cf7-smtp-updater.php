@@ -82,6 +82,7 @@ class CF7_SMTP_Updater {
     private function init_hooks(): void {
         add_filter('pre_set_site_transient_update_plugins', [$this, 'check_update']);
         add_filter('plugins_api', [$this, 'plugin_info'], 20, 3);
+        add_filter('upgrader_source_selection', [$this, 'select_source'], 10, 4);
         add_filter('upgrader_post_install', [$this, 'post_install'], 10, 3);
         add_filter('plugin_row_meta', [$this, 'plugin_row_meta'], 10, 2);
         add_filter('plugin_action_links_' . $this->plugin_file, [$this, 'plugin_action_links']);
@@ -163,30 +164,62 @@ class CF7_SMTP_Updater {
     }
 
     /**
-     * Replacer le dossier extrait sous le slug du plugin, puis le réactiver.
+     * Renommer l'archive GitHub en cf7-smtp-mail avant la copie dans plugins.
+     *
+     * @param string|WP_Error $source
+     * @param string          $remote_source
+     * @param WP_Upgrader     $upgrader
+     * @param array<string, mixed> $hook_extra
+     * @return string|WP_Error
+     */
+    public function select_source($source, string $remote_source, $upgrader, array $hook_extra) {
+        global $wp_filesystem;
+
+        if (is_wp_error($source) || ($hook_extra['plugin'] ?? '') !== $this->plugin_file) {
+            return $source;
+        }
+
+        $corrected = trailingslashit($remote_source) . $this->slug . '/';
+        if (trailingslashit((string) $source) === $corrected) {
+            return $source;
+        }
+
+        if ($wp_filesystem && $wp_filesystem->move($source, $corrected, true)) {
+            return $corrected;
+        }
+
+        return $source;
+    }
+
+    /**
+     * Replacer le dossier extrait sous le slug du plugin si le renommage précédent a échoué.
      *
      * @param mixed $response
      * @param array<string, mixed> $hook_extra
      * @param array<string, mixed> $result
-     * @return array<string, mixed>
+     * @return mixed
      */
-    public function post_install($response, array $hook_extra, array $result): array {
+    public function post_install($response, array $hook_extra, array $result) {
         global $wp_filesystem;
 
-        if (!isset($hook_extra['plugin']) || $hook_extra['plugin'] !== $this->plugin_file) {
-            return $result;
+        if (($hook_extra['plugin'] ?? '') !== $this->plugin_file) {
+            return $response;
         }
 
-        $plugin_folder = WP_PLUGIN_DIR . '/' . $this->slug;
-        if (!empty($result['destination']) && $result['destination'] !== $plugin_folder && $wp_filesystem) {
-            $wp_filesystem->move($result['destination'], $plugin_folder, true);
-            $result['destination'] = $plugin_folder;
+        $plugin_folder = untrailingslashit(WP_PLUGIN_DIR . '/' . $this->slug);
+        $destination = untrailingslashit((string) ($result['destination'] ?? ''));
+
+        if ($destination !== '' && $destination !== $plugin_folder && $wp_filesystem) {
+            $wp_filesystem->move($destination, $plugin_folder, true);
         }
 
-        activate_plugin($this->plugin_file);
+        if (!is_plugin_active($this->plugin_file)) {
+            activate_plugin($this->plugin_file);
+        }
+
         delete_transient('cf7_smtp_github_release');
 
-        return $result;
+        return $response;
     }
 
     /**

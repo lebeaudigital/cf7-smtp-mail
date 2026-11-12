@@ -3,7 +3,7 @@
  * Plugin Name: CF7 SMTP Mail
  * Plugin URI: https://github.com/lebeaudigital/cf7-smtp-mail
  * Description: Configuration SMTP pour les e-mails de Contact Form 7, par serveur SMTP ou connexion Google.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Le Beau Digital
  * Author URI: https://lebeaudigital.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('CF7_SMTP_VERSION', '1.0.0');
+define('CF7_SMTP_VERSION', '1.0.1');
 define('CF7_SMTP_FILE', __FILE__);
 define('CF7_SMTP_DIR', plugin_dir_path(__FILE__));
 define('CF7_SMTP_URL', plugin_dir_url(__FILE__));

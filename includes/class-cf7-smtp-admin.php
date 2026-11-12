@@ -50,13 +50,30 @@ class CF7_SMTP_Admin {
         }
 
         $this->page_hook = (string) add_submenu_page(
-            'wpcf7',
+            $this->contact_menu_slug(),
             __('Configuration SMTP', 'cf7-smtp-mail'),
             __('Configuration SMTP', 'cf7-smtp-mail'),
             'manage_options',
             'cf7-smtp-mail',
             [$this, 'render_page']
         );
+    }
+
+    /**
+     * Slug du menu Contact. Les versions récentes de CF7 utilisent wpcf7-dashboard.
+     */
+    private function contact_menu_slug(): string {
+        global $menu;
+
+        if (is_array($menu)) {
+            foreach ($menu as $item) {
+                if (isset($item[2]) && $item[2] === 'wpcf7-dashboard') {
+                    return 'wpcf7-dashboard';
+                }
+            }
+        }
+
+        return 'wpcf7';
     }
 
     /**
